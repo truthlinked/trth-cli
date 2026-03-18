@@ -1,0 +1,18 @@
+[package]
+name = "my-truthlinked-cell"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"
+
+[lib]
+name = "truthlinked_cell"
+crate-type = ["cdylib"]
+
+[dependencies]
+truthlinked-sdk = "0.1.1"
