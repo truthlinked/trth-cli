@@ -1,5 +1,17 @@
 # trth-cli
 
+```bash
+$ trth-cli --rpc https://rpc.truthlinked.org chain-info
+{
+  "height": 1,
+  "finalized_height": 0,
+  "genesis_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+  "chain_id": "0000000000000000000000000000000000000000000000000000000000000000",
+  "foundation_mint_authority": "c537050abe15a89a133b46e969cd61fb8fdec9b786ffdac462ffe27b3df0e7c9"
+}
+```
+
+
 A command line client for TruthLinked. It handles local keys, builds and signs transactions, talks to the RPC, and includes the SDK workflow for building and deploying cells.
 
 ## Build
