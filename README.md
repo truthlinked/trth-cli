@@ -128,4 +128,4 @@ The CLI includes commands for treasury proposals, system cell proposals, token a
 
 ## Notes
 
-The `truthlinked` dependency currently points to `../truthlinked` until the core repo is published. It will be switched to a git dependency when the main repo is public.
+The `truthlinked-core` dependency currently points to `../truthlinked/crates/truthlinked-core` until the core repo is published. It will be switched to a git dependency when the main repo is public.

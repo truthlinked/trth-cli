@@ -8,7 +8,7 @@ use bip39::Mnemonic;
 use serde::Deserialize;
 use serde_json::Value;
 use std::collections::HashSet;
-use truthlinked::*;
+use truthlinked_core::*;
 use fips204::traits::{SerDes, Signer};
 use std::time::{SystemTime, UNIX_EPOCH};
 use rand::RngCore;
@@ -1185,7 +1185,7 @@ fn build_cell(source: &str, output: Option<&str>) -> Result<(String, String), Bo
 
             match load_manifest_sets(candidate_str) {
                 Ok((reads, writes, _commutative, _storage_key_specs)) => {
-                    match truthlinked::cells::CellAccount::verify_manifest_against_bytecode(
+                    match truthlinked_core::cells::CellAccount::verify_manifest_against_bytecode(
                         &bytecode,
                         &reads,
                         &writes,
@@ -1223,7 +1223,7 @@ fn build_cell(source: &str, output: Option<&str>) -> Result<(String, String), Bo
         }
     }
 
-    let has_storage_ops = truthlinked::cells::CellAccount::verify_manifest_against_bytecode(
+    let has_storage_ops = truthlinked_core::cells::CellAccount::verify_manifest_against_bytecode(
         &bytecode,
         &[],
         &[],
@@ -1810,7 +1810,7 @@ fn parse_manifest_slots(
 /// Load manifest fields (reads/writes/commutative/specs) from a json file.
 fn load_manifest_sets(
     manifest_path: &str,
-) -> Result<(Vec<[u8; 32]>, Vec<[u8; 32]>, Vec<[u8; 32]>, Vec<truthlinked::cells::StorageKeySpec>), Box<dyn std::error::Error>> {
+) -> Result<(Vec<[u8; 32]>, Vec<[u8; 32]>, Vec<[u8; 32]>, Vec<truthlinked_core::cells::StorageKeySpec>), Box<dyn std::error::Error>> {
     let manifest_json = std::fs::read_to_string(manifest_path)?;
     load_manifest_sets_from_json(&manifest_json)
 }
@@ -1818,7 +1818,7 @@ fn load_manifest_sets(
 /// Parse storage key specs from manifest json.
 fn parse_manifest_specs(
     manifest: &serde_json::Value,
-) -> Result<Vec<truthlinked::cells::StorageKeySpec>, Box<dyn std::error::Error>> {
+) -> Result<Vec<truthlinked_core::cells::StorageKeySpec>, Box<dyn std::error::Error>> {
     let specs = manifest
         .get("storage_key_specs")
         .and_then(|v| v.as_array())
@@ -1829,7 +1829,7 @@ fn parse_manifest_specs(
             .ok_or("Invalid storage_key_specs.offset")?;
         let len = item.get("len").and_then(|v| v.as_u64())
             .ok_or("Invalid storage_key_specs.len")?;
-        out.push(truthlinked::cells::StorageKeySpec {
+        out.push(truthlinked_core::cells::StorageKeySpec {
             offset: offset as usize,
             len: len as usize,
         });
@@ -1840,7 +1840,7 @@ fn parse_manifest_specs(
 /// Load manifest fields directly from json bytes.
 fn load_manifest_sets_from_json(
     manifest_json: &str,
-) -> Result<(Vec<[u8; 32]>, Vec<[u8; 32]>, Vec<[u8; 32]>, Vec<truthlinked::cells::StorageKeySpec>), Box<dyn std::error::Error>> {
+) -> Result<(Vec<[u8; 32]>, Vec<[u8; 32]>, Vec<[u8; 32]>, Vec<truthlinked_core::cells::StorageKeySpec>), Box<dyn std::error::Error>> {
     let manifest: serde_json::Value = serde_json::from_str(manifest_json)?;
     let declared_reads = parse_manifest_slots(&manifest, "declared_reads")?;
     let declared_writes = parse_manifest_slots(&manifest, "declared_writes")?;
@@ -2363,7 +2363,7 @@ fn submit_cell_deploy(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let sender_keys = DualKeypair::load(from)?;
     let pubkey = sender_keys.dilithium_pk.clone().into_bytes();
-    let sender_account_id = truthlinked::pq_identity::account_id_from_pubkey(&pubkey);
+    let sender_account_id = truthlinked_core::pq_identity::account_id_from_pubkey(&pubkey);
 
     let cell_id_bytes = hex::decode(cell_id)?;
     if cell_id_bytes.len() != 32 {
@@ -2376,7 +2376,7 @@ fn submit_cell_deploy(
     let (declared_reads, declared_writes, commutative_keys, storage_key_specs) =
         if let Some(manifest_path) = manifest_path {
             let (reads, writes, commutative, specs) = load_manifest_sets(&manifest_path)?;
-            truthlinked::cells::CellAccount::verify_manifest_against_bytecode(
+            truthlinked_core::cells::CellAccount::verify_manifest_against_bytecode(
                 &bytecode,
                 &reads,
                 &writes,
@@ -2386,7 +2386,7 @@ fn submit_cell_deploy(
             (reads, writes, commutative, specs)
         } else if let Ok(Some(manifest_json)) = extract_manifest_section(&bytecode) {
             let (reads, writes, commutative, specs) = load_manifest_sets_from_json(&manifest_json)?;
-            truthlinked::cells::CellAccount::verify_manifest_against_bytecode(
+            truthlinked_core::cells::CellAccount::verify_manifest_against_bytecode(
                 &bytecode,
                 &reads,
                 &writes,
@@ -2735,7 +2735,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let genesis_hash = fetch_genesis_hash(&client, &cli.rpc)?;
             
             // Create transaction
-            let amount_raw = (amount as u128) * truthlinked::ONE_TRTH;
+            let amount_raw = (amount as u128) * truthlinked_core::ONE_TRTH;
             let timestamp = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
             
             let tx = pq_execution::Transaction {
@@ -2775,7 +2775,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             let genesis_hash = fetch_genesis_hash(&client, &cli.rpc)?;
             let timestamp = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
-            let trth_amount_raw = (trth_amount as u128) * truthlinked::ONE_TRTH;
+            let trth_amount_raw = (trth_amount as u128) * truthlinked_core::ONE_TRTH;
 
             let tx = pq_execution::Transaction {
                 sender: sender_account_id,
@@ -2815,7 +2815,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         Ok((val * 1_000_000_000.0) as u128)
                     } else {
                         let val: u64 = s.parse()?;
-                        Ok((val as u128) * truthlinked::ONE_TRTH)
+                        Ok((val as u128) * truthlinked_core::ONE_TRTH)
                     }
                 })
                 .collect::<Result<Vec<_>, Box<dyn std::error::Error>>>()?;
@@ -2865,7 +2865,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 });
             }
 
-            let est_gas = (recipients.len() as u128) * (truthlinked::constants::GAS_TRANSFER as u128);
+            let est_gas = (recipients.len() as u128) * (truthlinked_core::constants::GAS_TRANSFER as u128);
             let est_total = total_amount.saturating_add(est_gas);
             if sender_balance < est_total {
                 return Err(format!(
@@ -2908,14 +2908,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let genesis_hash = fetch_genesis_hash(&client, &cli.rpc)?;
             
             let timestamp = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
-            let amount_raw = (amount as u128) * truthlinked::ONE_TRTH;
+            let amount_raw = (amount as u128) * truthlinked_core::ONE_TRTH;
             if amount_raw == 0 {
                 return Err("Amount must be > 0".into());
             }
             
             let amount_u64 = u64::try_from(amount_raw).map_err(|_| "Amount too large")?;
             let calldata = encode_staking_stake(&sender_pubkey, amount_u64)?;
-            let cell_id = truthlinked::pq_execution::staking_system_cell_id();
+            let cell_id = truthlinked_core::pq_execution::staking_system_cell_id();
             let tx = pq_execution::Transaction {
                 sender: sender_account_id,
                 intent: pq_execution::TransactionIntent::CallCell {
@@ -2955,7 +2955,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             let genesis_hash = fetch_genesis_hash(&client, &cli.rpc)?;
             
-            let amount_raw = (amount as u128) * truthlinked::ONE_TRTH;
+            let amount_raw = (amount as u128) * truthlinked_core::ONE_TRTH;
             let timestamp = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
             if amount_raw == 0 {
                 return Err("Amount must be > 0".into());
@@ -2963,7 +2963,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             
             let amount_u64 = u64::try_from(amount_raw).map_err(|_| "Amount too large")?;
             let calldata = encode_staking_stake(&sender_pubkey, amount_u64)?;
-            let cell_id = truthlinked::pq_execution::staking_system_cell_id();
+            let cell_id = truthlinked_core::pq_execution::staking_system_cell_id();
             let tx = pq_execution::Transaction {
                 sender: sender_account_id,
                 intent: pq_execution::TransactionIntent::CallCell {
@@ -2994,7 +2994,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             let genesis_hash = fetch_genesis_hash(&client, &cli.rpc)?;
             
-            let amount_raw = (amount as u128) * truthlinked::ONE_TRTH;
+            let amount_raw = (amount as u128) * truthlinked_core::ONE_TRTH;
             let timestamp = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
             if amount_raw == 0 {
                 return Err("Amount must be > 0".into());
@@ -3002,7 +3002,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             
             let amount_u64 = u64::try_from(amount_raw).map_err(|_| "Amount too large")?;
             let calldata = encode_staking_unstake(&sender_pubkey, amount_u64)?;
-            let cell_id = truthlinked::pq_execution::staking_system_cell_id();
+            let cell_id = truthlinked_core::pq_execution::staking_system_cell_id();
             let tx = pq_execution::Transaction {
                 sender: sender_account_id,
                 intent: pq_execution::TransactionIntent::CallCell {
@@ -3035,7 +3035,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let timestamp = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
             
             let calldata = encode_staking_withdraw(&sender_pubkey)?;
-            let cell_id = truthlinked::pq_execution::staking_system_cell_id();
+            let cell_id = truthlinked_core::pq_execution::staking_system_cell_id();
             let tx = pq_execution::Transaction {
                 sender: sender_account_id,
                 intent: pq_execution::TransactionIntent::CallCell {
@@ -3070,7 +3070,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let timestamp = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
             
             let calldata = encode_staking_unjail(&sender_pubkey)?;
-            let cell_id = truthlinked::pq_execution::staking_system_cell_id();
+            let cell_id = truthlinked_core::pq_execution::staking_system_cell_id();
             let tx = pq_execution::Transaction {
                 sender: sender_account_id,
                 intent: pq_execution::TransactionIntent::CallCell {
@@ -3110,7 +3110,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let timestamp = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
 
             let calldata = encode_staking_delegate_add(delegate_account);
-            let cell_id = truthlinked::pq_execution::staking_system_cell_id();
+            let cell_id = truthlinked_core::pq_execution::staking_system_cell_id();
 
             let tx = pq_execution::Transaction {
                 sender: sender_account_id,
@@ -3150,7 +3150,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let timestamp = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
 
             let calldata = encode_staking_delegate_remove(delegate_account);
-            let cell_id = truthlinked::pq_execution::staking_system_cell_id();
+            let cell_id = truthlinked_core::pq_execution::staking_system_cell_id();
 
             let tx = pq_execution::Transaction {
                 sender: sender_account_id,
@@ -3186,14 +3186,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             let owner_account = pq_identity::account_id_from_pubkey(&owner_pubkey_bytes);
 
-            let amount_raw = (amount as u128) * truthlinked::ONE_TRTH;
+            let amount_raw = (amount as u128) * truthlinked_core::ONE_TRTH;
             let amount_u64 = u64::try_from(amount_raw).map_err(|_| "Amount too large")?;
 
             let genesis_hash = fetch_genesis_hash(&client, &cli.rpc)?;
             let timestamp = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
 
             let calldata = encode_staking_stake_for(owner_account, &owner_pubkey_bytes, amount_u64)?;
-            let cell_id = truthlinked::pq_execution::staking_system_cell_id();
+            let cell_id = truthlinked_core::pq_execution::staking_system_cell_id();
 
             let tx = pq_execution::Transaction {
                 sender: sender_account_id,
@@ -3229,14 +3229,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
             let owner_account = pq_identity::account_id_from_pubkey(&owner_pubkey_bytes);
 
-            let amount_raw = (amount as u128) * truthlinked::ONE_TRTH;
+            let amount_raw = (amount as u128) * truthlinked_core::ONE_TRTH;
             let amount_u64 = u64::try_from(amount_raw).map_err(|_| "Amount too large")?;
 
             let genesis_hash = fetch_genesis_hash(&client, &cli.rpc)?;
             let timestamp = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
 
             let calldata = encode_staking_unstake_for(owner_account, &owner_pubkey_bytes, amount_u64)?;
-            let cell_id = truthlinked::pq_execution::staking_system_cell_id();
+            let cell_id = truthlinked_core::pq_execution::staking_system_cell_id();
 
             let tx = pq_execution::Transaction {
                 sender: sender_account_id,
@@ -3276,7 +3276,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let timestamp = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
 
             let calldata = encode_staking_withdraw_for(owner_account, &owner_pubkey_bytes)?;
-            let cell_id = truthlinked::pq_execution::staking_system_cell_id();
+            let cell_id = truthlinked_core::pq_execution::staking_system_cell_id();
 
             let tx = pq_execution::Transaction {
                 sender: sender_account_id,
@@ -3316,7 +3316,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let timestamp = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
 
             let calldata = encode_staking_unjail_for(owner_account, &owner_pubkey_bytes)?;
-            let cell_id = truthlinked::pq_execution::staking_system_cell_id();
+            let cell_id = truthlinked_core::pq_execution::staking_system_cell_id();
 
             let tx = pq_execution::Transaction {
                 sender: sender_account_id,
@@ -3351,13 +3351,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let timestamp = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
 
             let amount_raw = (amount as u128)
-                .checked_mul(truthlinked::ONE_TRTH)
+                .checked_mul(truthlinked_core::ONE_TRTH)
                 .ok_or("amount too large")?;
             if amount_raw == 0 {
                 return Err("Amount must be > 0".into());
             }
             let calldata = encode_vetrth_lock(owner, lock_blocks);
-            let cell_id = truthlinked::pq_execution::vetrth_system_cell_id();
+            let cell_id = truthlinked_core::pq_execution::vetrth_system_cell_id();
 
             let tx = pq_execution::Transaction {
                 sender: sender_account_id,
@@ -3392,7 +3392,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let timestamp = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
 
             let calldata = encode_vetrth_extend(owner, lock_blocks);
-            let cell_id = truthlinked::pq_execution::vetrth_system_cell_id();
+            let cell_id = truthlinked_core::pq_execution::vetrth_system_cell_id();
 
             let tx = pq_execution::Transaction {
                 sender: sender_account_id,
@@ -3427,7 +3427,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let timestamp = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
 
             let calldata = encode_vetrth_unlock(owner);
-            let cell_id = truthlinked::pq_execution::vetrth_system_cell_id();
+            let cell_id = truthlinked_core::pq_execution::vetrth_system_cell_id();
 
             let tx = pq_execution::Transaction {
                 sender: sender_account_id,
@@ -3477,7 +3477,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             };
 
             let amount_raw = (amount as u128)
-                .checked_mul(truthlinked::ONE_TRTH)
+                .checked_mul(truthlinked_core::ONE_TRTH)
                 .ok_or("amount too large")?;
             if amount_raw == 0 {
                 return Err("Amount must be > 0".into());
@@ -3490,7 +3490,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 amount_raw,
                 timelock_blocks,
             );
-            let cell_id = truthlinked::pq_execution::treasury_system_cell_id();
+            let cell_id = truthlinked_core::pq_execution::treasury_system_cell_id();
 
             let tx = pq_execution::Transaction {
                 sender: sender_account_id,
@@ -3529,7 +3529,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             let proposal_id = parse_account_id_hex(&proposal_id)?;
             let calldata = encode_treasury_vote(proposal_id, approve);
-            let cell_id = truthlinked::pq_execution::treasury_system_cell_id();
+            let cell_id = truthlinked_core::pq_execution::treasury_system_cell_id();
 
             let tx = pq_execution::Transaction {
                 sender: sender_account_id,
@@ -3565,7 +3565,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             let proposal_id = parse_account_id_hex(&proposal_id)?;
             let calldata = encode_treasury_execute(proposal_id);
-            let cell_id = truthlinked::pq_execution::treasury_system_cell_id();
+            let cell_id = truthlinked_core::pq_execution::treasury_system_cell_id();
 
             let tx = pq_execution::Transaction {
                 sender: sender_account_id,
@@ -3910,7 +3910,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Commands::DeployToken { from, cell_id, name, symbol, decimals, supply } => {
             let sender_keys = DualKeypair::load(&from)?;
             let pubkey = sender_keys.dilithium_pk.clone().into_bytes();
-            let sender_account_id = truthlinked::pq_identity::account_id_from_pubkey(&pubkey);
+            let sender_account_id = truthlinked_core::pq_identity::account_id_from_pubkey(&pubkey);
             
             let cell_id_bytes = hex::decode(&cell_id)?;
             let mut cell_id_arr = [0u8; 32];
@@ -3951,7 +3951,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Commands::CallCell { from, cell_id, calldata, value, gas_limit, simulate } => {
             let sender_keys = DualKeypair::load(&from)?;
             let pubkey = sender_keys.dilithium_pk.clone().into_bytes();
-            let sender_account_id = truthlinked::pq_identity::account_id_from_pubkey(&pubkey);
+            let sender_account_id = truthlinked_core::pq_identity::account_id_from_pubkey(&pubkey);
             
             let cell_id_bytes = hex::decode(&cell_id)?;
             let mut cell_id_arr = [0u8; 32];
@@ -4017,7 +4017,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             
             let sender_keys = DualKeypair::load(&from)?;
             let pubkey = sender_keys.dilithium_pk.clone().into_bytes();
-            let sender_account_id = truthlinked::pq_identity::account_id_from_pubkey(&pubkey);
+            let sender_account_id = truthlinked_core::pq_identity::account_id_from_pubkey(&pubkey);
             
             let cell_id_bytes = hex::decode(&cell_id)?;
             if cell_id_bytes.len() != 32 {
@@ -4034,7 +4034,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     load_manifest_sets(&manifest_path)?;
                 
                 // Verify manifest locally
-                truthlinked::cells::CellAccount::verify_manifest_against_bytecode(
+                truthlinked_core::cells::CellAccount::verify_manifest_against_bytecode(
                     &new_bytecode,
                     &new_declared_reads,
                     &new_declared_writes,
@@ -4046,7 +4046,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             } else if let Ok(Some(manifest_json)) = extract_manifest_section(&new_bytecode) {
                 let (new_declared_reads, new_declared_writes, new_commutative_keys, new_storage_key_specs) =
                     load_manifest_sets_from_json(&manifest_json)?;
-                truthlinked::cells::CellAccount::verify_manifest_against_bytecode(
+                truthlinked_core::cells::CellAccount::verify_manifest_against_bytecode(
                     &new_bytecode,
                     &new_declared_reads,
                     &new_declared_writes,
@@ -4278,7 +4278,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let new_bytecode = std::fs::read(&wasm_path)?;
             let (declared_reads, declared_writes, commutative_keys, storage_key_specs) = if let Some(manifest_path) = manifest_path {
                 let (reads, writes, commutative, specs) = load_manifest_sets(&manifest_path)?;
-                truthlinked::cells::CellAccount::verify_manifest_against_bytecode(
+                truthlinked_core::cells::CellAccount::verify_manifest_against_bytecode(
                     &new_bytecode,
                     &reads,
                     &writes,
@@ -4287,7 +4287,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 (reads, writes, commutative, specs)
             } else if let Ok(Some(manifest_json)) = extract_manifest_section(&new_bytecode) {
                 let (reads, writes, commutative, specs) = load_manifest_sets_from_json(&manifest_json)?;
-                truthlinked::cells::CellAccount::verify_manifest_against_bytecode(
+                truthlinked_core::cells::CellAccount::verify_manifest_against_bytecode(
                     &new_bytecode,
                     &reads,
                     &writes,
@@ -4704,7 +4704,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 freeze_arr,
                 voting_period_blocks,
             );
-            let cell_id = truthlinked::pq_execution::token_governance_system_cell_id();
+            let cell_id = truthlinked_core::pq_execution::token_governance_system_cell_id();
 
             let tx = pq_execution::Transaction {
                 sender: sender_account_id,
@@ -4747,7 +4747,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let timestamp = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
 
             let calldata = encode_token_authority_vote(token_arr, approve);
-            let cell_id = truthlinked::pq_execution::token_governance_system_cell_id();
+            let cell_id = truthlinked_core::pq_execution::token_governance_system_cell_id();
 
             let tx = pq_execution::Transaction {
                 sender: sender_account_id,
@@ -4840,7 +4840,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             
             let timestamp = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
             let calldata = encode_name_registry_propose(&name, target_arr, owner_arr)?;
-            let cell_id = truthlinked::pq_execution::name_registry_system_cell_id();
+            let cell_id = truthlinked_core::pq_execution::name_registry_system_cell_id();
             
             let tx = pq_execution::Transaction {
                 sender: sender_account_id,
@@ -4880,7 +4880,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             
             let timestamp = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
             let calldata = encode_name_registry_vote(&name, approve)?;
-            let cell_id = truthlinked::pq_execution::name_registry_system_cell_id();
+            let cell_id = truthlinked_core::pq_execution::name_registry_system_cell_id();
             
             let tx = pq_execution::Transaction {
                 sender: sender_account_id,
@@ -4920,7 +4920,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             
             let timestamp = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
             let calldata = encode_name_registry_renew(&name)?;
-            let cell_id = truthlinked::pq_execution::name_registry_system_cell_id();
+            let cell_id = truthlinked_core::pq_execution::name_registry_system_cell_id();
             
             let tx = pq_execution::Transaction {
                 sender: sender_account_id,
@@ -4967,7 +4967,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             
             let timestamp = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
             let calldata = encode_name_registry_transfer(&name, new_owner_arr)?;
-            let cell_id = truthlinked::pq_execution::name_registry_system_cell_id();
+            let cell_id = truthlinked_core::pq_execution::name_registry_system_cell_id();
             
             let tx = pq_execution::Transaction {
                 sender: sender_account_id,
@@ -5010,11 +5010,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             let timestamp = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
             let bond_amount = (bond as u128)
-                .checked_mul(truthlinked::ONE_TRTH)
+                .checked_mul(truthlinked_core::ONE_TRTH)
                 .ok_or("Bond overflow")?;
 
             let calldata = encode_oracle_propose_url(&url_pattern, bond_amount, voting_period_blocks)?;
-            let cell_id = truthlinked::pq_execution::oracle_governance_system_cell_id();
+            let cell_id = truthlinked_core::pq_execution::oracle_governance_system_cell_id();
 
             let tx = Transaction {
                 sender: sender_account_id,
@@ -5057,7 +5057,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let timestamp = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
 
             let calldata = encode_oracle_vote_url(&url_pattern, approve)?;
-            let cell_id = truthlinked::pq_execution::oracle_governance_system_cell_id();
+            let cell_id = truthlinked_core::pq_execution::oracle_governance_system_cell_id();
 
             let tx = Transaction {
                 sender: sender_account_id,
@@ -5103,7 +5103,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let timestamp = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
 
             let calldata = encode_oracle_report_malicious(&url_pattern, &evidence)?;
-            let cell_id = truthlinked::pq_execution::oracle_governance_system_cell_id();
+            let cell_id = truthlinked_core::pq_execution::oracle_governance_system_cell_id();
 
             let tx = Transaction {
                 sender: sender_account_id,
@@ -5235,7 +5235,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         Commands::ManifestInit { bytecode_file } => {
             let bytecode = std::fs::read(&bytecode_file)?;
-            let analysis = truthlinked::cells::CellAccount::analyze_bytecode(&bytecode)?;
+            let analysis = truthlinked_core::cells::CellAccount::analyze_bytecode(&bytecode)?;
 
             // Auto-populate slot lists from static analysis.
             let reads_json: Vec<serde_json::Value> = analysis
@@ -5298,14 +5298,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 load_manifest_sets(&manifest_file)?;
             
             // Verify manifest against bytecode.
-            match truthlinked::cells::CellAccount::verify_manifest_against_bytecode(
+            match truthlinked_core::cells::CellAccount::verify_manifest_against_bytecode(
                 &bytecode,
                 &declared_reads,
                 &declared_writes,
                 &storage_key_specs,
             ) {
                 Ok(()) => {
-                    let analysis = truthlinked::cells::CellAccount::analyze_bytecode(&bytecode)?;
+                    let analysis = truthlinked_core::cells::CellAccount::analyze_bytecode(&bytecode)?;
                     println!("Manifest verification PASSED");
                     println!("  Bytecode: {}", bytecode_file);
                     println!("  Manifest: {}", manifest_file);
@@ -5336,7 +5336,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let (declared_reads, declared_writes, commutative_keys, _storage_key_specs) =
                 load_manifest_sets(&manifest_file)?;
             
-            let manifest_hash = truthlinked::cells::CellAccount::compute_manifest_hash(
+            let manifest_hash = truthlinked_core::cells::CellAccount::compute_manifest_hash(
                 &bytecode,
                 &declared_reads,
                 &declared_writes,
